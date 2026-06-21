@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Script to Screen Time — YouTube Script Duration Calculator</title>
+  <meta name="description" content="Paste your YouTube script and instantly know how long your video will be. Adjust for your speaking pace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d0d;
+      --surface:  #161616;
+      --border:   #2a2a2a;
+      --red:      #ff3c3c;
+      --red-dim:  #7a1c1c;
+      --text:     #f0f0f0;
+      --muted:    #888;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--red);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .logo-text { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+    .logo-text span { color: var(--red); }
+
+    .author-tag {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .author-tag strong { color: var(--text); }
+    /* ── UPDATE NAME/EMAIL HERE ── */
+    /* Replace "Your Full Name" and "your@email.com" below */
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem 2.5rem;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      max-width: 680px;
+      margin: 0 auto 1rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--red);
+    }
+    .hero-sub {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      flex: 1;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── RESULT BAR ── */
+    .result-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .result-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+    .result-time {
+      font-family: var(--mono);
+      font-size: clamp(2.4rem, 7vw, 4rem);
+      font-weight: 600;
+      color: var(--red);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .result-time.empty { color: var(--border); }
+
+    .result-stats {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .stat {
+      text-align: right;
+    }
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .stat-lbl {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    /* ── PACE CONTROL ── */
+    .pace-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 2rem;
+    }
+    .pace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.9rem;
+    }
+    .pace-title { font-size: 0.85rem; font-weight: 600; }
+    .pace-value {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--red);
+      background: #1e0e0e;
+      border: 1px solid var(--red-dim);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+    }
+    .pace-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+      margin-bottom: 0.6rem;
+    }
+    .pace-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--bg);
+      cursor: pointer;
+    }
+    .pace-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── PRESETS ── */
+    .presets {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.9rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+    .preset-label { font-size: 0.72rem; color: var(--muted); align-self: center; margin-right: 0.3rem; }
+    .preset-btn {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover, .preset-btn.active {
+      border-color: var(--red);
+      color: var(--text);
+      background: #1e0e0e;
+    }
+
+    /* ── TEXTAREA ── */
+    .script-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .script-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .script-toolbar-left { font-size: 0.85rem; font-weight: 600; }
+    .toolbar-actions { display: flex; gap: 0.5rem; }
+    .icon-btn {
+      font-size: 0.72rem;
+      font-family: var(--mono);
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover {
+      border-color: var(--red);
+      color: var(--text);
+    }
+    textarea {
+      width: 100%;
+      min-height: 260px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.7;
+      padding: 1.25rem 1.5rem;
+      resize: vertical;
+      caret-color: var(--red);
+    }
+    textarea::placeholder { color: #3a3a3a; }
+
+    /* ── BREAKDOWN ── */
+    .breakdown {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 2rem;
+    }
+    .breakdown-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .breakdown-card {
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+    }
+    .breakdown-card-val {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .breakdown-card-lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-info {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .footer-info a { color: var(--text); text-decoration: none; }
+    .footer-info a:hover { color: var(--red); }
+
+    .dh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--red);
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      border: none;
+      cursor: pointer;
+    }
+    .dh-btn:hover { opacity: 0.85; }
+    .dh-btn svg { width: 14px; height: 14px; fill: #fff; flex-shrink: 0; }
+
+    @media (max-width: 540px) {
+      header { padding: 1rem; }
+      .hero { padding: 2.5rem 1rem 1.5rem; }
+      .result-bar { flex-direction: column; align-items: flex-start; }
+      .stat { text-align: left; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <!-- YouTube-style play icon -->
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    <div class="logo-text">Script<span>2</span>Screen</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-eyebrow">YouTube Creator Tool</div>
+  <h1>How long will your<br><em>video</em> actually be?</h1>
+  <p class="hero-sub">Paste your script. Get the exact runtime at your speaking pace — before you ever hit record.</p>
+</div>
+
+<main>
+
+  <!-- RESULT -->
+  <div class="result-bar">
+    <div>
+      <div class="result-label">Estimated Video Duration</div>
+      <div class="result-time empty" id="resultTime">0:00</div>
+    </div>
+    <div class="result-stats">
+      <div class="stat">
+        <div class="stat-val" id="statWords">0</div>
+        <div class="stat-lbl">words</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statChars">0</div>
+        <div class="stat-lbl">characters</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statSentences">0</div>
+        <div class="stat-lbl">sentences</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PACE -->
+  <div class="pace-panel">
+    <div class="pace-header">
+      <div class="pace-title">Speaking Pace</div>
+      <div class="pace-value" id="paceDisplay">130 wpm</div>
+    </div>
+    <input type="range" class="pace-slider" id="paceSlider" min="80" max="220" value="130" step="5">
+    <div class="pace-labels">
+      <span>80 — slow &amp; deliberate</span>
+      <span>150 — conversational</span>
+      <span>220 — rapid fire</span>
+    </div>
+    <div class="presets">
+      <span class="preset-label">Presets:</span>
+      <button class="preset-btn" data-wpm="100">Tutorial / Ed</button>
+      <button class="preset-btn active" data-wpm="130">Vlog</button>
+      <button class="preset-btn" data-wpm="150">Talk / Interview</button>
+      <button class="preset-btn" data-wpm="170">Commentary</button>
+      <button class="preset-btn" data-wpm="190">Fast Paced</button>
+    </div>
+  </div>
+
+  <!-- SCRIPT INPUT -->
+  <div class="script-panel">
+    <div class="script-toolbar">
+      <div class="script-toolbar-left">Your Script</div>
+      <div class="toolbar-actions">
+        <button class="icon-btn" id="pasteBtn">Paste</button>
+        <button class="icon-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <textarea id="scriptInput" placeholder="Paste or type your script here…
+
+Hey everyone, welcome back to the channel. Today we're going to talk about…"></textarea>
+  </div>
+
+  <!-- BREAKDOWN -->
+  <div class="breakdown">
+    <div class="breakdown-title">Duration Breakdown</div>
+    <div class="breakdown-grid">
+      <div class="breakdown-card">
+        <div class="breakdown-card-val" id="bdRaw">0:00</div>
+        <div class="breakdown-card-lbl">Pure reading time</div>
+      </div>
+      <div class="breakdown-card">
+        <div class="breakdown-card-val" id="bdPauses">+0:00</div>
+        <div class="breakdown-card-lbl">Estimated pauses (~8%)</div>
+      </div>
+      <div class="breakdown-card">
+        <div class="breakdown-card-val" id="bdTotal">0:00</div>
+        <div class="breakdown-card-lbl">Total estimated runtime</div>
+      </div>
+      <div class="breakdown-card">
+        <div class="breakdown-card-val" id="bdYT">—</div>
+        <div class="breakdown-card-lbl">Closest YouTube bracket</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-info">
+    Made by <strong>Amaan Hasan</strong> &middot; <a href="mailto:your@email.com">amaanhasan2002@email.com</a>
+  </div>
+  <a class="dh-btn" href="https://digitalheroesco.com" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    Built for Digital Heroes
+  </a>
+</footer>
+
+<script>
+  const scriptInput = document.getElementById('scriptInput');
+  const paceSlider  = document.getElementById('paceSlider');
+  const paceDisplay = document.getElementById('paceDisplay');
+
+  const resultTime    = document.getElementById('resultTime');
+  const statWords     = document.getElementById('statWords');
+  const statChars     = document.getElementById('statChars');
+  const statSentences = document.getElementById('statSentences');
+
+  const bdRaw    = document.getElementById('bdRaw');
+  const bdPauses = document.getElementById('bdPauses');
+  const bdTotal  = document.getElementById('bdTotal');
+  const bdYT     = document.getElementById('bdYT');
+
+  function fmt(totalSecs) {
+    const s = Math.round(totalSecs);
+    if (s < 3600) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2,'0')}`;
+    } else {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    }
+  }
+
+  function ytBracket(mins) {
+    if (mins < 1)   return '< 1 min (Short)';
+    if (mins < 2)   return '1–2 min (Short)';
+    if (mins < 5)   return '2–5 min';
+    if (mins < 8)   return '5–8 min';
+    if (mins < 10)  return '8–10 min';
+    if (mins < 12)  return '10–12 min ✓ Ad eligible';
+    if (mins < 20)  return '12–20 min';
+    if (mins < 30)  return '20–30 min';
+    if (mins < 60)  return '30–60 min (Long form)';
+    return '60 min+ (Deep dive)';
+  }
+
+  function countWords(text) {
+    return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+  }
+
+  function countSentences(text) {
+    if (!text.trim()) return 0;
+    const matches = text.match(/[^.!?]*[.!?]+/g);
+    return matches ? matches.length : 1;
+  }
+
+  function calculate() {
+    const text = scriptInput.value;
+    const wpm  = parseInt(paceSlider.value, 10);
+    const words = countWords(text);
+    const chars = text.length;
+    const sentences = countSentences(text);
+
+    statWords.textContent     = words.toLocaleString();
+    statChars.textContent     = chars.toLocaleString();
+    statSentences.textContent = sentences.toLocaleString();
+
+    if (words === 0) {
+      resultTime.textContent = '0:00';
+      resultTime.classList.add('empty');
+      bdRaw.textContent    = '0:00';
+      bdPauses.textContent = '+0:00';
+      bdTotal.textContent  = '0:00';
+      bdYT.textContent     = '—';
+      return;
+    }
+
+    const rawSecs    = (words / wpm) * 60;
+    const pauseSecs  = rawSecs * 0.08;
+    const totalSecs  = rawSecs + pauseSecs;
+    const totalMins  = totalSecs / 60;
+
+    resultTime.textContent = fmt(totalSecs);
+    resultTime.classList.remove('empty');
+    bdRaw.textContent    = fmt(rawSecs);
+    bdPauses.textContent = '+' + fmt(pauseSecs);
+    bdTotal.textContent  = fmt(totalSecs);
+    bdYT.textContent     = ytBracket(totalMins);
+  }
+
+  scriptInput.addEventListener('input', calculate);
+  paceSlider.addEventListener('input', () => {
+    paceDisplay.textContent = paceSlider.value + ' wpm';
+    // sync preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.wpm) === parseInt(paceSlider.value));
+    });
+    calculate();
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      paceSlider.value = btn.dataset.wpm;
+      paceDisplay.textContent = btn.dataset.wpm + ' wpm';
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calculate();
+    });
+  });
+
+  document.getElementById('pasteBtn').addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      scriptInput.value = text;
+      calculate();
+    } catch {
+      scriptInput.focus();
+      alert('Click inside the text area and use Ctrl+V / Cmd+V to paste.');
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    scriptInput.value = '';
+    calculate();
+  });
+
+  // init
+  calculate();
+</script>
+</body>
+</html>
